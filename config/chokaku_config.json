@@ -1,5 +1,5 @@
 {
-  "mic_id": 0,
+  "mic_id": 12,
   "model_dir": "./models",
   "model_xml": "chokaku.xml",
   "model_bin": "chokaku.bin",
