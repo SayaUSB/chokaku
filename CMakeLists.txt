@@ -16,12 +16,29 @@ add_executable(chokaku
     src/chokaku/chokaku.cpp
 )
 
+# Test executable
+add_executable(chokaku_test
+    test/chokaku_test.cpp
+    src/chokaku/chokaku.cpp
+)
+
 target_include_directories(chokaku PRIVATE 
     ${PORTAUDIO_INCLUDE_DIRS}
     include
 )
 
+target_include_directories(chokaku_test PRIVATE 
+    ${PORTAUDIO_INCLUDE_DIRS}
+    include
+)
+
 target_link_libraries(chokaku 
+    openvino::runtime
+    ${PORTAUDIO_LIBRARIES}
+    ${CSV_LIB}
+)
+
+target_link_libraries(chokaku_test 
     openvino::runtime
     ${PORTAUDIO_LIBRARIES}
     ${CSV_LIB}
@@ -33,4 +50,4 @@ target_compile_options(chokaku PRIVATE
 )
 
 # Install
-install(TARGETS chokaku DESTINATION bin)
+install(TARGETS chokaku chokaku_test DESTINATION bin)

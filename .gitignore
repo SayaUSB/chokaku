@@ -1,7 +1,7 @@
 # Model files
-*.xml
+# *.xml
 *.pth
-*.bin
+# *.bin
 *.onnx
 *.pb
 *.tflite
@@ -14,7 +14,7 @@ logs/
 build/
 devel/
 model/
-models/
+# models/
 install/
 
 
@@ -53,8 +53,8 @@ venv/
 *.log
 
 # Config
-*.csv
-*.json
+# *.csv
+# *.json
 
 # Config files with sensitive data
 *.env

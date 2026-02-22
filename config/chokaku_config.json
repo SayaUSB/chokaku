@@ -1,0 +1,10 @@
+{
+  "mic_id": 0,
+  "model_dir": "./models",
+  "model_xml": "chokaku.xml",
+  "model_bin": "chokaku.bin",
+  "model_class_map": "chokaku_class_map.csv",
+  "sample_rate": 16000,
+  "chunk_duration": 0.96,
+  "audio_buffer_size": 512
+}

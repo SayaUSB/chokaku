@@ -10,16 +10,23 @@
 
 namespace chokaku {
 
-ChokakuOpenVINOInference::ChokakuOpenVINOInference(const std::string& xml_path,
-                                                 const std::string& class_map_path)
-    : xml_path_(xml_path), class_map_path_(class_map_path) {
+ChokakuOpenVINOInference::ChokakuOpenVINOInference(const ChokakuConfig& config)
+    : config_(config) {
     
-    size_t last_dot = xml_path_.find_last_of('.');
-    if (last_dot != std::string::npos) {
-        bin_path_ = xml_path_.substr(0, last_dot) + ".bin";
-    } else {
-        bin_path_ = xml_path_ + ".bin";
+    // Build file paths from config
+    std::string dir = config_.model_dir;
+    if (!dir.empty() && dir.back() == '/') {
+        dir.pop_back();
     }
+    
+    xml_path_ = dir + "/" + config_.model_xml;
+    bin_path_ = dir + "/" + config_.model_bin;
+    class_map_path_ = dir + "/" + config_.model_class_map;
+    
+    std::cout << "Loading model files:\n";
+    std::cout << "XML: " << xml_path_ << "\n";
+    std::cout << "BIN: " << bin_path_ << "\n";
+    std::cout << "CSV: " << class_map_path_ << "\n";
 
     std::ifstream xml_file(xml_path_);
     if (!xml_file.good()) {
@@ -232,14 +239,49 @@ std::vector<float> ChokakuOpenVINOInference::capture_audio_blocking(float durati
     std::vector<float> buffer(num_samples);
     
     PaStream* stream;
-    PaError err = Pa_OpenDefaultStream(&stream,
-                                       1,          // input channels (mono)
-                                       0,          // output channels
-                                       paFloat32,  // sample format
-                                       sample_rate,
-                                       256,        // frames per buffer
-                                       nullptr,    // callback (blocking mode)
-                                       nullptr);
+    
+    // Set up input parameters
+    PaStreamParameters inputParams;
+    
+    // Validate the specified device
+    if (config_.mic_id >= 0 && config_.mic_id < Pa_GetDeviceCount()) {
+        const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(config_.mic_id);
+        if (deviceInfo->maxInputChannels > 0) {
+            inputParams.device = config_.mic_id;
+        } else {
+            std::cerr << "Device " << config_.mic_id << " (" << deviceInfo->name 
+                      << ") has no input channels, falling back to default input device\n";
+            inputParams.device = Pa_GetDefaultInputDevice();
+        }
+    } else {
+        std::cerr << "Invalid device ID " << config_.mic_id 
+                  << ", falling back to default input device\n";
+        inputParams.device = Pa_GetDefaultInputDevice();
+    }
+    
+    // Check if we have a valid device
+    if (inputParams.device == paNoDevice) {
+        std::cerr << "No valid input device found\n";
+        return {};
+    }
+    
+    const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(inputParams.device);
+    std::cout << "Using device: " << deviceInfo->name << " (max input channels: " 
+              << deviceInfo->maxInputChannels << ")\n";
+    
+    inputParams.channelCount = 1;
+    inputParams.sampleFormat = paFloat32;
+    inputParams.suggestedLatency = deviceInfo->defaultLowInputLatency;
+    inputParams.hostApiSpecificStreamInfo = nullptr;
+    
+    PaError err = Pa_OpenStream(&stream,
+                              &inputParams,     // input parameters
+                              nullptr,          // output parameters (none)
+                              sample_rate,
+                              256,             // frames per buffer
+                              paClipOff,       // stream flags
+                              nullptr,         // callback (blocking mode)
+                              nullptr);
     
     if (err != paNoError) {
         std::cerr << "Failed to open PortAudio stream: " << Pa_GetErrorText(err) << "\n";
@@ -396,6 +438,68 @@ void print_prediction(const PredictionResult& result, size_t top_k) {
                   << std::fixed << std::setprecision(4) 
                   << result.confidence_scores[i] << "\n";
     }
+}
+
+ChokakuConfig ChokakuConfig::load_from_json(const std::string& config_path) {
+    ChokakuConfig config;
+    
+    std::ifstream file(config_path);
+    if (!file.is_open()) {
+        std::cerr << "Could not open config file: " << config_path << ", using defaults.\n";
+        return config;
+    }
+    
+    std::string line;
+    while (std::getline(file, line)) {
+        // Remove whitespace
+        line.erase(0, line.find_first_not_of(" \t\n\r"));
+        line.erase(line.find_last_not_of(" \t\n\r") + 1);
+        
+        if (line.empty() || line[0] == '{' || line[0] == '}' || line[0] == ',') {
+            continue;
+        }
+        
+        // Parse key-value pairs
+        size_t colon_pos = line.find(':');
+        if (colon_pos != std::string::npos) {
+            std::string key = line.substr(0, colon_pos);
+            std::string value = line.substr(colon_pos + 1);
+            
+            // Clean up key and value
+            key.erase(0, key.find_first_not_of(" \t\""));
+            key.erase(key.find_last_not_of(" \t\"") + 1);
+            value.erase(0, value.find_first_not_of(" \t,"));
+            value.erase(value.find_last_not_of(" \t,") + 1);
+            
+            // Remove quotes from value if present
+            if (!value.empty() && value.front() == '"') {
+                value.erase(0, 1);
+            }
+            if (!value.empty() && value.back() == '"') {
+                value.pop_back();
+            }
+            
+            if (key == "mic_id") {
+                config.mic_id = std::stoi(value);
+            } else if (key == "model_dir") {
+                config.model_dir = value;
+            } else if (key == "model_xml") {
+                config.model_xml = value;
+            } else if (key == "model_bin") {
+                config.model_bin = value;
+            } else if (key == "model_class_map") {
+                config.model_class_map = value;
+            } else if (key == "sample_rate") {
+                config.sample_rate = std::stoi(value);
+            } else if (key == "chunk_duration") {
+                config.chunk_duration = std::stof(value);
+            } else if (key == "audio_buffer_size") {
+                config.audio_buffer_size = std::stoi(value);
+            }
+        }
+    }
+    
+    return config;
 }
 
 } // namespace chokaku
