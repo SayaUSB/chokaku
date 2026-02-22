@@ -1,4 +1,5 @@
 #include "chokaku/chokaku.hpp"
+#include "chokaku/utils/csv.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -13,7 +14,6 @@ ChokakuOpenVINOInference::ChokakuOpenVINOInference(const std::string& xml_path,
                                                  const std::string& class_map_path)
     : xml_path_(xml_path), class_map_path_(class_map_path) {
     
-    // Derive bin path
     size_t last_dot = xml_path_.find_last_of('.');
     if (last_dot != std::string::npos) {
         bin_path_ = xml_path_.substr(0, last_dot) + ".bin";
@@ -21,7 +21,6 @@ ChokakuOpenVINOInference::ChokakuOpenVINOInference(const std::string& xml_path,
         bin_path_ = xml_path_ + ".bin";
     }
 
-    // Validate files exist
     std::ifstream xml_file(xml_path_);
     if (!xml_file.good()) {
         throw std::runtime_error("XML model file not found: " + xml_path_);
@@ -35,13 +34,11 @@ ChokakuOpenVINOInference::ChokakuOpenVINOInference(const std::string& xml_path,
     }
     bin_file.close();
 
-    // Initialize PortAudio
     PaError err = Pa_Initialize();
     if (err != paNoError) {
         throw std::runtime_error(std::string("PortAudio initialization failed: ") + Pa_GetErrorText(err));
     }
 
-    // Load model and class map
     load_model();
     load_class_map();
 
@@ -61,13 +58,10 @@ ChokakuOpenVINOInference::~ChokakuOpenVINOInference() {
     Pa_Terminate();
 }
 
-// Model Loading
 void ChokakuOpenVINOInference::load_model() {
     try {
-        // Read IR model
         model_ = core_.read_model(xml_path_);
         
-        // Get input/output info
         auto inputs = model_->inputs();
         auto outputs = model_->outputs();
         
@@ -76,50 +70,17 @@ void ChokakuOpenVINOInference::load_model() {
         }
 
         auto input_node = inputs[0];
-        input_name_ = input_node.get_any_name();
-
-        std::cout << "Number of outputs: " << outputs.size() << "\n";
-        
-        // Find the output with class predictions (usually the larger one or index 1)
-        // YAMNet: output 0 = embeddings (1024), output 1 = scores (521 classes)
-        size_t max_size = 0;
-        for (size_t i = 0; i < outputs.size(); ++i) {
-            auto shape = outputs[i].get_partial_shape();
-            std::cout << "Output " << i << " : " << outputs[i].get_any_name() 
-                      << " - " << shape << "\n";
-            
-            // Heuristic: pick output with more elements (class scores vs embeddings)
-            if (shape.is_static()) {
-                size_t total = 1;
-                for (auto dim : shape.to_shape()) total *= dim;
-                if (total > max_size) {
-                    max_size = total;
-                    output_idx_ = i;
-                }
-            }
-        }
-        
         auto output_node = outputs[output_idx_];
         output_name_ = output_node.get_any_name();
+        input_name_ = input_node.get_any_name();
         
-        std::cout << "Using output " << output_idx_ << " for predictions: " 
-                  << output_name_ << "\n";
-
-        std::cout << "Input  : " << input_name_ << " - " << input_node.get_partial_shape() << "\n";
-
         // Reshape input to fixed size: 15360 samples (0.96s @ 16kHz)
         const int target_length = 15360;
         ov::Shape new_shape = {static_cast<size_t>(target_length)};
         model_->reshape({{input_name_, new_shape}});
-        std::cout << "Reshaped input to: [" << target_length << "]\n";
 
-        // Compile model for CPU
         compiled_model_ = core_.compile_model(model_, "CPU");
-        
-        // Create inference request
         infer_request_ = compiled_model_.create_infer_request();
-
-        // Cache shapes
         input_shape_ = compiled_model_.input(input_name_).get_shape();
         output_shape_ = compiled_model_.output(output_idx_).get_shape();
 
@@ -130,38 +91,19 @@ void ChokakuOpenVINOInference::load_model() {
 }
 
 void ChokakuOpenVINOInference::load_class_map() {
-    std::ifstream file(class_map_path_);
-    if (!file.is_open()) {
-        std::cerr << "Warning: Could not open class map file: " << class_map_path_ << "\n";
-        return;
-    }
-
-    std::string line;
-    // Skip header
-    std::getline(file, line);
-    
-    while (std::getline(file, line)) {
-        std::stringstream ss(line);
-        std::string index, mid, display_name;
+    try {
+        io::CSVReader<3> csv(class_map_path_);
+        csv.read_header(io::ignore_extra_column, "index", "mid", "display_name");
         
-        // Parse CSV: index,mid,display_name
-        if (std::getline(ss, index, ',') && 
-            std::getline(ss, mid, ',') && 
-            std::getline(ss, display_name)) {
-            // Remove quotes if present
-            auto trim_quotes = [](std::string& s) {
-                if (s.size() >= 2 && s.front() == '"' && s.back() == '"') {
-                    s = s.substr(1, s.size() - 2);
-                }
-            };
-            trim_quotes(index);
-            trim_quotes(display_name);
+        std::string index, mid, display_name;
+        while (csv.read_row(index, mid, display_name)) {
             class_map_[index] = display_name;
         }
+    } catch (const std::exception& e) {
+        std::cerr << "Error loading class map: " << e.what() << "\n";
     }
 }
 
-// Audio Preprocessing
 std::vector<float> ChokakuOpenVINOInference::resample_audio(const std::vector<float>& waveform,
                                                           int src_rate, int dst_rate) {
     if (src_rate == dst_rate) return waveform;
@@ -188,22 +130,17 @@ std::vector<float> ChokakuOpenVINOInference::preprocess_audio(const std::vector<
                                                            int sample_rate,
                                                            int target_sample_rate,
                                                            float target_duration) {
-    // Convert to mono (already mono for mic input, but handle stereo just in case)
-    std::vector<float> mono = waveform; // Assume mono for now
+    std::vector<float> mono = waveform;
     
-    // Resample to target rate
     std::vector<float> resampled = resample_audio(mono, sample_rate, target_sample_rate);
     
-    // Target length
     size_t target_length = static_cast<size_t>(target_sample_rate * target_duration);
     
     std::vector<float> processed;
     if (resampled.size() < target_length) {
-        // Pad with zeros
         processed = resampled;
         processed.resize(target_length, 0.0f);
     } else if (resampled.size() > target_length) {
-        // Truncate
         processed.assign(resampled.begin(), resampled.begin() + target_length);
     } else {
         processed = resampled;
@@ -219,7 +156,7 @@ PredictionResult ChokakuOpenVINOInference::predict(const std::vector<float>& aud
     if (processed.empty()) {
         return {{}, {}, -1};
     }
-    return predict(processed.data(), processed.size(), 16000); // Already resampled
+    return predict(processed.data(), processed.size(), 16000);
 }
 
 PredictionResult ChokakuOpenVINOInference::predict(const float* audio_data, 
@@ -229,39 +166,31 @@ PredictionResult ChokakuOpenVINOInference::predict(const float* audio_data,
     result.top_class_index = -1;
     
     try {
-        // Create input tensor
         ov::Tensor input_tensor(compiled_model_.input(input_name_).get_element_type(), 
                                input_shape_);
         
-        // Copy data
         float* input_data = input_tensor.data<float>();
         size_t copy_len = std::min(length, input_shape_[0]);
         std::memcpy(input_data, audio_data, copy_len * sizeof(float));
         
-        // Pad if necessary
         if (copy_len < input_shape_[0]) {
             std::fill(input_data + copy_len, input_data + input_shape_[0], 0.0f);
         }
 
-        // Set input and run inference
         infer_request_.set_input_tensor(input_tensor);
         infer_request_.infer();
 
-        // Get output by index (not name) to handle multiple outputs
         ov::Tensor output_tensor = infer_request_.get_output_tensor(output_idx_);
         const float* predictions = output_tensor.data<const float>();
         
-        // Get actual shape and size
         auto out_shape = output_tensor.get_shape();
         size_t num_classes = 1;
         for (auto dim : out_shape) num_classes *= dim;
         
-        // Handle 2D output [1, 521] vs [521]
         if (out_shape.size() == 2 && out_shape[0] == 1) {
             num_classes = out_shape[1];
         }
 
-        // Find top 5
         std::vector<std::pair<float, size_t>> scored_indices;
         for (size_t i = 0; i < num_classes; ++i) {
             scored_indices.push_back({predictions[i], i});
@@ -272,11 +201,10 @@ PredictionResult ChokakuOpenVINOInference::predict(const float* audio_data,
                          scored_indices.end(),
                          std::greater<std::pair<float, size_t>>());
 
-        // Build result
         for (size_t i = 0; i < std::min(size_t(5), num_classes); ++i) {
             size_t idx = scored_indices[i].second;
             float score = scored_indices[i].first;
-            std::string class_name = "Class_" + std::to_string(idx);
+            std::string class_name = std::to_string(idx);
             
             auto it = class_map_.find(std::to_string(idx));
             if (it != class_map_.end()) {
@@ -385,26 +313,10 @@ int ChokakuOpenVINOInference::pa_callback(const void* input_buffer, void* output
     return paContinue;
 }
 
-// ============================================================================
-// Model Information
-// ============================================================================
-
 void ChokakuOpenVINOInference::print_model_info() const {
     std::cout << "\n=== OpenVINO Model Information ===\n";
     std::cout << "XML path: " << xml_path_ << "\n";
     std::cout << "BIN path: " << bin_path_ << "\n";
-    std::cout << "Input name: " << input_name_ << "\n";
-    std::cout << "Input shape: [" << input_shape_[0] << "]\n";
-    for (size_t i = 0; i < input_shape_.size(); ++i) {
-        std::cout << input_shape_[i] << (i < input_shape_.size()-1 ? "," : "");
-    }
-    std::cout << "]\n";
-    std::cout << "Output name: " << output_name_ << " (index: " << output_idx_ << ")\n";
-    std::cout << "Output shape: [";
-    for (size_t i = 0; i < output_shape_.size(); ++i) {
-        std::cout << output_shape_[i] << (i < output_shape_.size()-1 ? "," : "");
-    }
-    std::cout << "]\n";
     
     auto devices = core_.get_available_devices();
     std::cout << "Available devices: ";

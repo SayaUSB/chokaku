@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Find packages
 find_package(OpenVINO REQUIRED)
 find_package(PkgConfig REQUIRED)
+find_library(CSV_LIB csv)
 pkg_check_modules(PORTAUDIO REQUIRED portaudio-2.0)
 
 # Executable
@@ -23,6 +24,7 @@ target_include_directories(chokaku PRIVATE
 target_link_libraries(chokaku 
     openvino::runtime
     ${PORTAUDIO_LIBRARIES}
+    ${CSV_LIB}
 )
 
 target_compile_options(chokaku PRIVATE 
