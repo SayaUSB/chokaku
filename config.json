@@ -1,9 +1,0 @@
-{
-  "model_dir": ".",
-  "amplified_audio": 1.0,
-  "whistle_threshold": 0.3,
-  "whistle_labels": ["whistle", "whistling", "train whistle", "Steam whistle"],
-  "sample_rate": 16000,
-  "chunk_duration": 1.0,
-  "audio_buffer_size": 512
-}
