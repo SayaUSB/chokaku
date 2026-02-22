@@ -45,8 +45,6 @@ ChokakuOpenVINOInference::ChokakuOpenVINOInference(const std::string& xml_path,
     std::cout << "Chokaku OpenVINO inference initialized\n";
     std::cout << "Model XML : " << xml_path_ << "\n";
     std::cout << "Model BIN : " << bin_path_ << "\n";
-    std::cout << "Device    : CPU\n";
-    std::cout << "Classes   : " << class_map_.size() << "\n";
 }
 
 ChokakuOpenVINOInference::~ChokakuOpenVINOInference() {
