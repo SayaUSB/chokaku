@@ -4,7 +4,7 @@
   <name>chokaku</name>
   <version>1.0.0</version>
   <description>ROS2 package for whistle detection using OpenVINO</description>
-  <maintainer email="ichiro@ichiro.its">ICHIRO ITS</maintainer>
+  <maintainer email="binasyahdiba@gmail.com">SayaUSB</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
