@@ -10,14 +10,9 @@
 #include <atomic>
 #include <thread>
 #include "chokaku/utils/config.hpp"
+#include "chokaku/utils/prediction.hpp"
 
 namespace chokaku {
-
-struct PredictionResult {
-    std::vector<std::string> predicted_classes;
-    std::vector<float> confidence_scores;
-    int top_class_index;
-};
 
 class Inference {
 public:
@@ -98,10 +93,6 @@ private:
     void capture_loop(float duration, int sample_rate);
     std::vector<float> capture_audio_blocking(float duration, int sample_rate);
 };
-
-// Utility functions
-std::map<std::string, std::string> load_csv_class_map(const std::string& csv_path);
-void print_prediction(const PredictionResult& result, size_t top_k = 3);
 
 } // namespace chokaku
 

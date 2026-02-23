@@ -15,6 +15,7 @@ add_executable(chokaku
     src/chokaku/chokaku_main.cpp 
     src/chokaku/chokaku.cpp
     src/chokaku/utils/config.cpp
+    src/chokaku/utils/prediction.cpp
 )
 
 # Test executable
@@ -22,6 +23,7 @@ add_executable(chokaku_test
     test/chokaku_test.cpp
     src/chokaku/chokaku.cpp
     src/chokaku/utils/config.cpp
+    src/chokaku/utils/prediction.cpp
 )
 
 target_include_directories(chokaku PRIVATE 
