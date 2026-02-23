@@ -24,22 +24,9 @@
 #include <csignal>
 #include <string>
 
-namespace {
-    chokaku::Inference* g_inference = nullptr;
-    
-    void signal_handler(int sig) {
-        std::cout << "\nStopping OpenVINO classification...\n";
-        if (g_inference) {
-            g_inference->stop_realtime_classification();
-        }
-    }
-}
-
 ChokakuNode::ChokakuNode() : Node("chokaku_node") {
-    // Initialize publisher
     whistle_publisher_ = this->create_publisher<std_msgs::msg::Bool>("chokaku/detection", 10);
     
-    // Get config path
     std::string config_path = "config/chokaku_config.json";
     this->declare_parameter("config_path", config_path);
     config_path = this->get_parameter("config_path").as_string();
@@ -48,12 +35,8 @@ ChokakuNode::ChokakuNode() : Node("chokaku_node") {
     RCLCPP_INFO(this->get_logger(), "Config path: %s", config_path.c_str());
     
     try {
-        // Load configuration and initialize inference
         config_ = chokaku::ChokakuConfig::load_from_json(config_path);
         inference_ = std::make_unique<chokaku::Inference>(config_);
-        g_inference = inference_.get();
-        
-        // Start real-time classification
         inference_->start_realtime_classification(config_.chunk_duration, config_.sample_rate);
         
         RCLCPP_INFO(this->get_logger(), "Whistle detection started successfully");
@@ -64,7 +47,6 @@ ChokakuNode::ChokakuNode() : Node("chokaku_node") {
         return;
     }
     
-    // Create timer for checking predictions
     timer_ = this->create_wall_timer(
         std::chrono::milliseconds(100),
         std::bind(&ChokakuNode::check_whistle_detection, this)
@@ -82,7 +64,6 @@ void ChokakuNode::check_whistle_detection() {
         return;
     }
     
-    // Get the latest prediction result
     auto prediction = inference_->get_latest_prediction();
     
     // Check if the top prediction is "Whistling" (index 35) or "Whistle" (index 396)
@@ -94,7 +75,6 @@ void ChokakuNode::check_whistle_detection() {
     static bool last_state = false;
     bool current_state = is_whistle;
     
-    // Publish and log state changes
     if (current_state != last_state) {
         auto message = std_msgs::msg::Bool();
         message.data = current_state;

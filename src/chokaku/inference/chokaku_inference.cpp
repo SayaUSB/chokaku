@@ -228,8 +228,7 @@ void Inference::start_realtime_classification(float duration, int sample_rate) {
     std::cout << "Starting OpenVINO real-time audio classification...\n";
     std::cout << "Press Ctrl+C to stop\n";
     
-    // Run in blocking mode in main thread for simplicity, or spawn thread
-    capture_loop(duration, sample_rate);
+    capture_thread_ = std::thread(&Inference::capture_loop, this, duration, sample_rate);
 }
 
 void Inference::stop_realtime_classification() {
