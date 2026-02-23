@@ -1,34 +1,32 @@
-#include "chokaku/inference/chokaku_inference.hpp"
-#include <iostream>
+#include "chokaku/node/chokaku_node.hpp"
 #include <csignal>
+#include <string>
 
 namespace {
-    chokaku::Inference* g_inference = nullptr;
+    rclcpp::Node::SharedPtr g_node = nullptr;
     
     void signal_handler(int sig) {
         std::cout << "\nStopping OpenVINO classification...\n";
-        if (g_inference) {
-            g_inference->stop_realtime_classification();
+        if (g_node) {
+            rclcpp::shutdown();
         }
     }
 }
 
-int main() {
-    const std::string config_path = "config/chokaku_config.json";
+int main(int argc, char* argv[]) {
+    std::signal(SIGINT, signal_handler);
+    std::signal(SIGTERM, signal_handler);
+    
+    rclcpp::init(argc, argv);
+    
+    g_node = std::make_shared<ChokakuNode>();
     
     try {
-        chokaku::ChokakuConfig config = chokaku::ChokakuConfig::load_from_json(config_path);
-        chokaku::Inference inference(config);
-        g_inference = &inference;
-        
-        std::signal(SIGINT, signal_handler);
-        
-        inference.start_realtime_classification(config.chunk_duration, config.sample_rate);
-        
+        rclcpp::spin(g_node);
     } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << "\n";
-        return 1;
+        RCLCPP_ERROR(g_node->get_logger(), "Error in node execution: %s", e.what());
     }
-
+    
+    rclcpp::shutdown();
     return 0;
 }

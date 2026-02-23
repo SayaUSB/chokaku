@@ -60,6 +60,9 @@ public:
     std::string get_input_name() const;
     std::string get_output_name() const;
     size_t get_num_classes() const;
+    
+    // ROS2 integration methods
+    PredictionResult get_latest_prediction() const;
 
 private:
     ChokakuConfig config_;
@@ -92,6 +95,10 @@ private:
 
     // Audio capture
     std::unique_ptr<AudioCapture> audio_capture_;
+    
+    // Latest prediction for ROS2 integration
+    PredictionResult latest_prediction_;
+    mutable std::mutex prediction_mutex_;
 
     // Private methods
     void load_model();

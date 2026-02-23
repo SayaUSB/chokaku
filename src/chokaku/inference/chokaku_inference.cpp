@@ -208,6 +208,12 @@ void Inference::capture_loop(float duration, int sample_rate) {
         if (!audio_data.empty()) {
             auto result = predict(audio_data, sample_rate);
             print_prediction(result);
+            
+            // Store latest prediction for ROS2 integration
+            {
+                std::lock_guard<std::mutex> lock(prediction_mutex_);
+                latest_prediction_ = result;
+            }
         }
     }
 }
@@ -269,6 +275,11 @@ std::string Inference::get_output_name() const {
 
 size_t Inference::get_num_classes() const {
     return class_map_.size();
+}
+
+PredictionResult Inference::get_latest_prediction() const {
+    std::lock_guard<std::mutex> lock(prediction_mutex_);
+    return latest_prediction_;
 }
 
 } // namespace chokaku
