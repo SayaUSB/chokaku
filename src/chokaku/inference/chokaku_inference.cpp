@@ -1,4 +1,4 @@
-#include "chokaku/chokaku.hpp"
+#include "chokaku/inference/chokaku_inference.hpp"
 #include "chokaku/utils/csv.hpp"
 #include <iostream>
 #include <fstream>
@@ -248,11 +248,5 @@ std::string Inference::get_output_name() const {
 size_t Inference::get_num_classes() const {
     return class_map_.size();
 }
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-
 
 } // namespace chokaku

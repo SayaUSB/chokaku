@@ -13,7 +13,7 @@ pkg_check_modules(PORTAUDIO REQUIRED portaudio-2.0)
 # Executable
 add_executable(chokaku 
     src/chokaku/chokaku_main.cpp 
-    src/chokaku/chokaku.cpp
+    src/chokaku/inference/chokaku_inference.cpp
     src/chokaku/utils/config.cpp
     src/chokaku/utils/prediction.cpp
     src/chokaku/utils/audio_processing.cpp
@@ -23,7 +23,7 @@ add_executable(chokaku
 # Test executable
 add_executable(chokaku_test
     test/chokaku_test.cpp
-    src/chokaku/chokaku.cpp
+    src/chokaku/inference/chokaku_inference.cpp
     src/chokaku/utils/config.cpp
     src/chokaku/utils/prediction.cpp
     src/chokaku/utils/audio_processing.cpp

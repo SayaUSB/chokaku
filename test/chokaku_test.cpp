@@ -1,4 +1,4 @@
-#include "chokaku/chokaku.hpp"
+#include "chokaku/inference/chokaku_inference.hpp"
 #include <iostream>
 #include <portaudio.h>
 
