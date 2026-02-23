@@ -14,12 +14,14 @@ pkg_check_modules(PORTAUDIO REQUIRED portaudio-2.0)
 add_executable(chokaku 
     src/chokaku/chokaku_main.cpp 
     src/chokaku/chokaku.cpp
+    src/chokaku/utils/config.cpp
 )
 
 # Test executable
 add_executable(chokaku_test
     test/chokaku_test.cpp
     src/chokaku/chokaku.cpp
+    src/chokaku/utils/config.cpp
 )
 
 target_include_directories(chokaku PRIVATE 
