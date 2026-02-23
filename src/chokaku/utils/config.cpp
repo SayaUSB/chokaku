@@ -82,6 +82,10 @@ ChokakuConfig ChokakuConfig::load_from_json(const std::string& config_path) {
                 config.audio_buffer_size = std::stoi(value);
             } else if (key == "confidence_threshold") {
                 config.confidence_threshold = std::stof(value);
+            } else if (key == "top_predictions_output") {
+                config.top_predictions_output = std::stoi(value);
+            } else if (key == "print_output") {
+                config.print_output = (value == "true" || value == "1");
             }
         }
     }
