@@ -12,7 +12,7 @@ find_package(PkgConfig REQUIRED)
 find_library(CSV_LIB csv)
 pkg_check_modules(PORTAUDIO REQUIRED portaudio-2.0)
 
-add_executable(chokaku_node 
+add_executable(main 
     src/chokaku/chokaku_main.cpp 
     src/chokaku/node/chokaku_node.cpp
     src/chokaku/inference/chokaku_inference.cpp
@@ -22,7 +22,7 @@ add_executable(chokaku_node
     src/chokaku/utils/audio_capture.cpp
 )
 
-add_executable(chokaku_test
+add_executable(check
     test/chokaku_test.cpp
     src/chokaku/inference/chokaku_inference.cpp
     src/chokaku/utils/config.cpp
@@ -31,42 +31,42 @@ add_executable(chokaku_test
     src/chokaku/utils/audio_capture.cpp
 )
 
-ament_target_dependencies(chokaku_node rclcpp std_msgs)
+ament_target_dependencies(main rclcpp std_msgs)
 
-target_include_directories(chokaku_node PRIVATE 
+target_include_directories(main PRIVATE 
     ${PORTAUDIO_INCLUDE_DIRS}
     include
 )
 
-target_include_directories(chokaku_test PRIVATE 
+target_include_directories(check PRIVATE 
     ${PORTAUDIO_INCLUDE_DIRS}
     include
 )
 
-target_link_libraries(chokaku_node 
+target_link_libraries(main 
     rclcpp::rclcpp
     openvino::runtime
     ${PORTAUDIO_LIBRARIES}
     ${CSV_LIB}
 )
 
-target_link_libraries(chokaku_test 
+target_link_libraries(check 
     openvino::runtime
     ${PORTAUDIO_LIBRARIES}
     ${CSV_LIB}
 )
 
-target_compile_options(chokaku_node PRIVATE 
+target_compile_options(main PRIVATE 
     ${PORTAUDIO_CFLAGS_OTHER}
     -Wall -Wextra -O3
 )
 
-target_compile_options(chokaku_test PRIVATE 
+target_compile_options(check PRIVATE 
     ${PORTAUDIO_CFLAGS_OTHER}
     -Wall -Wextra -O3
 )
 
-install(TARGETS chokaku_node chokaku_test
+install(TARGETS main check
   DESTINATION lib/${PROJECT_NAME}
 )
 
