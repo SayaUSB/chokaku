@@ -9,8 +9,11 @@
 #include <stdexcept>
 #include <atomic>
 #include <thread>
+#include <memory>
 #include "chokaku/utils/config.hpp"
 #include "chokaku/utils/prediction.hpp"
+#include "chokaku/utils/audio_processing.hpp"
+#include "chokaku/utils/audio_capture.hpp"
 
 namespace chokaku {
 
@@ -35,11 +38,6 @@ public:
     std::string get_input_name() const;
     std::string get_output_name() const;
     size_t get_num_classes() const;
-
-    static std::vector<float> preprocess_audio(const std::vector<float>& waveform, 
-                                               int sample_rate = 16000,
-                                               int target_sample_rate = 16000,
-                                               float target_duration = 0.96f);
 
 private:
     ChokakuConfig config_;
@@ -70,26 +68,14 @@ private:
     std::thread capture_thread_;
     mutable std::mutex mutex_;
 
-    // PortAudio
-    PaStream* pa_stream_{nullptr};
-    std::vector<float> audio_buffer_;
-    std::mutex buffer_mutex_;
+    // Audio capture
+    std::unique_ptr<AudioCapture> audio_capture_;
 
     // Private methods
     void load_model();
     void load_class_map();
-    static std::vector<float> resample_audio(const std::vector<float>& waveform, 
-                                             int src_rate, int dst_rate);
-    
-    // PortAudio callback
-    static int pa_callback(const void* input_buffer, void* output_buffer,
-                          unsigned long frames_per_buffer,
-                          const PaStreamCallbackTimeInfo* time_info,
-                          PaStreamCallbackFlags status_flags,
-                          void* user_data);
     
     void capture_loop(float duration, int sample_rate);
-    std::vector<float> capture_audio_blocking(float duration, int sample_rate);
 };
 
 } // namespace chokaku

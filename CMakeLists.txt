@@ -16,6 +16,8 @@ add_executable(chokaku
     src/chokaku/chokaku.cpp
     src/chokaku/utils/config.cpp
     src/chokaku/utils/prediction.cpp
+    src/chokaku/utils/audio_processing.cpp
+    src/chokaku/utils/audio_capture.cpp
 )
 
 # Test executable
@@ -24,6 +26,8 @@ add_executable(chokaku_test
     src/chokaku/chokaku.cpp
     src/chokaku/utils/config.cpp
     src/chokaku/utils/prediction.cpp
+    src/chokaku/utils/audio_processing.cpp
+    src/chokaku/utils/audio_capture.cpp
 )
 
 target_include_directories(chokaku PRIVATE 
