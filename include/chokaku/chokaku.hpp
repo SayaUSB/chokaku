@@ -42,10 +42,8 @@ public:
                                                float target_duration = 0.96f);
 
 private:
-    // Configuration
     ChokakuConfig config_;
     
-    // File paths
     std::string xml_path_;
     std::string bin_path_;
     std::string class_map_path_;
