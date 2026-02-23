@@ -4,7 +4,7 @@
 #include <cstring>
 
 namespace {
-    chokaku::ChokakuOpenVINOInference* g_inference = nullptr;
+    chokaku::Inference* g_inference = nullptr;
     
     void signal_handler(int sig) {
         std::cout << "\nStopping OpenVINO classification...\n";
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
     
     try {
         chokaku::ChokakuConfig config = chokaku::ChokakuConfig::load_from_json(config_path);
-        chokaku::ChokakuOpenVINOInference inference(config);
+        chokaku::Inference inference(config);
         g_inference = &inference;
         
         std::signal(SIGINT, signal_handler);

@@ -34,15 +34,15 @@ struct ChokakuConfig {
     static ChokakuConfig load_from_json(const std::string& config_path);
 };
 
-class ChokakuOpenVINOInference {
+class Inference {
 public:
-    ChokakuOpenVINOInference(const ChokakuConfig& config);
-    ~ChokakuOpenVINOInference();
+    Inference(const ChokakuConfig& config);
+    ~Inference();
 
-    ChokakuOpenVINOInference(const ChokakuOpenVINOInference&) = delete;
-    ChokakuOpenVINOInference& operator=(const ChokakuOpenVINOInference&) = delete;
-    ChokakuOpenVINOInference(ChokakuOpenVINOInference&&) = delete;
-    ChokakuOpenVINOInference& operator=(ChokakuOpenVINOInference&&) = delete;
+    Inference(const Inference&) = delete;
+    Inference& operator=(const Inference&) = delete;
+    Inference(Inference&&) = delete;
+    Inference& operator=(Inference&&) = delete;
 
     PredictionResult predict(const std::vector<float>& audio_data, int sample_rate = 16000);
     PredictionResult predict(const float* audio_data, size_t length, int sample_rate = 16000);

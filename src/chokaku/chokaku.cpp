@@ -10,7 +10,7 @@
 
 namespace chokaku {
 
-ChokakuOpenVINOInference::ChokakuOpenVINOInference(const ChokakuConfig& config)
+Inference::Inference(const ChokakuConfig& config)
     : config_(config) {
     
     // Build file paths from config
@@ -54,7 +54,7 @@ ChokakuOpenVINOInference::ChokakuOpenVINOInference(const ChokakuConfig& config)
     std::cout << "Model BIN : " << bin_path_ << "\n";
 }
 
-ChokakuOpenVINOInference::~ChokakuOpenVINOInference() {
+Inference::~Inference() {
     stop_realtime_classification();
     
     if (pa_stream_) {
@@ -63,7 +63,7 @@ ChokakuOpenVINOInference::~ChokakuOpenVINOInference() {
     Pa_Terminate();
 }
 
-void ChokakuOpenVINOInference::load_model() {
+void Inference::load_model() {
     try {
         model_ = core_.read_model(xml_path_);
         
@@ -95,7 +95,7 @@ void ChokakuOpenVINOInference::load_model() {
     }
 }
 
-void ChokakuOpenVINOInference::load_class_map() {
+void Inference::load_class_map() {
     try {
         io::CSVReader<3> csv(class_map_path_);
         csv.read_header(io::ignore_extra_column, "index", "mid", "display_name");
@@ -109,7 +109,7 @@ void ChokakuOpenVINOInference::load_class_map() {
     }
 }
 
-std::vector<float> ChokakuOpenVINOInference::resample_audio(const std::vector<float>& waveform,
+std::vector<float> Inference::resample_audio(const std::vector<float>& waveform,
                                                           int src_rate, int dst_rate) {
     if (src_rate == dst_rate) return waveform;
     
@@ -131,7 +131,7 @@ std::vector<float> ChokakuOpenVINOInference::resample_audio(const std::vector<fl
     return resampled;
 }
 
-std::vector<float> ChokakuOpenVINOInference::preprocess_audio(const std::vector<float>& waveform,
+std::vector<float> Inference::preprocess_audio(const std::vector<float>& waveform,
                                                            int sample_rate,
                                                            int target_sample_rate,
                                                            float target_duration) {
@@ -155,7 +155,7 @@ std::vector<float> ChokakuOpenVINOInference::preprocess_audio(const std::vector<
 }
 
 // Inference
-PredictionResult ChokakuOpenVINOInference::predict(const std::vector<float>& audio_data, 
+PredictionResult Inference::predict(const std::vector<float>& audio_data, 
                                                  int sample_rate) {
     auto processed = preprocess_audio(audio_data, sample_rate);
     if (processed.empty()) {
@@ -164,7 +164,7 @@ PredictionResult ChokakuOpenVINOInference::predict(const std::vector<float>& aud
     return predict(processed.data(), processed.size(), 16000);
 }
 
-PredictionResult ChokakuOpenVINOInference::predict(const float* audio_data, 
+PredictionResult Inference::predict(const float* audio_data, 
                                                  size_t length, 
                                                  int sample_rate) {
     PredictionResult result;
@@ -233,7 +233,7 @@ PredictionResult ChokakuOpenVINOInference::predict(const float* audio_data,
 }
 
 // Real-time Classification
-std::vector<float> ChokakuOpenVINOInference::capture_audio_blocking(float duration, 
+std::vector<float> Inference::capture_audio_blocking(float duration, 
                                                                   int sample_rate) {
     size_t num_samples = static_cast<size_t>(duration * sample_rate);
     std::vector<float> buffer(num_samples);
@@ -307,7 +307,7 @@ std::vector<float> ChokakuOpenVINOInference::capture_audio_blocking(float durati
     return buffer;
 }
 
-void ChokakuOpenVINOInference::capture_loop(float duration, int sample_rate) {
+void Inference::capture_loop(float duration, int sample_rate) {
     while (running_.load()) {
         auto audio_data = capture_audio_blocking(duration, sample_rate);
         if (!audio_data.empty()) {
@@ -317,7 +317,7 @@ void ChokakuOpenVINOInference::capture_loop(float duration, int sample_rate) {
     }
 }
 
-void ChokakuOpenVINOInference::start_realtime_classification(float duration, int sample_rate) {
+void Inference::start_realtime_classification(float duration, int sample_rate) {
     if (running_.load()) {
         std::cerr << "Real-time classification already running\n";
         return;
@@ -331,29 +331,29 @@ void ChokakuOpenVINOInference::start_realtime_classification(float duration, int
     capture_loop(duration, sample_rate);
 }
 
-void ChokakuOpenVINOInference::stop_realtime_classification() {
+void Inference::stop_realtime_classification() {
     running_ = false;
     if (capture_thread_.joinable()) {
         capture_thread_.join();
     }
 }
 
-bool ChokakuOpenVINOInference::is_running() const {
+bool Inference::is_running() const {
     return running_.load();
 }
 
-int ChokakuOpenVINOInference::pa_callback(const void* input_buffer, void* output_buffer,
+int Inference::pa_callback(const void* input_buffer, void* output_buffer,
                                           unsigned long frames_per_buffer,
                                           const PaStreamCallbackTimeInfo* time_info,
                                           PaStreamCallbackFlags status_flags,
                                           void* user_data) {
     // Callback implementation for non-blocking mode if needed
-    auto* self = static_cast<ChokakuOpenVINOInference*>(user_data);
+    auto* self = static_cast<Inference*>(user_data);
     // ... handle streaming buffer
     return paContinue;
 }
 
-void ChokakuOpenVINOInference::print_model_info() const {
+void Inference::print_model_info() const {
     std::cout << "\n=== OpenVINO Model Information ===\n";
     std::cout << "XML path: " << xml_path_ << "\n";
     std::cout << "BIN path: " << bin_path_ << "\n";
@@ -375,15 +375,15 @@ void ChokakuOpenVINOInference::print_model_info() const {
     std::cout << std::string(40, '=') << "\n";
 }
 
-std::string ChokakuOpenVINOInference::get_input_name() const {
+std::string Inference::get_input_name() const {
     return input_name_;
 }
 
-std::string ChokakuOpenVINOInference::get_output_name() const {
+std::string Inference::get_output_name() const {
     return output_name_;
 }
 
-size_t ChokakuOpenVINOInference::get_num_classes() const {
+size_t Inference::get_num_classes() const {
     return class_map_.size();
 }
 
