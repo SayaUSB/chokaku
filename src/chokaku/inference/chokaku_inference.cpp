@@ -207,7 +207,7 @@ void Inference::capture_loop(float duration, int sample_rate) {
         auto audio_data = audio_capture_->capture_audio_blocking(duration, sample_rate);
         if (!audio_data.empty()) {
             auto result = predict(audio_data, sample_rate);
-            print_prediction(result);
+            print_prediction(result, 5); // Print top 5 predictions
             
             // Store latest prediction for ROS2 integration
             {
