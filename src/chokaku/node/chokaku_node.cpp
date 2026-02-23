@@ -66,10 +66,16 @@ void ChokakuNode::check_whistle_detection() {
     
     auto prediction = inference_->get_latest_prediction();
     
-    // Check if the top prediction is "Whistling" (index 35) or "Whistle" (index 396)
+    // Check if any whistle-related class meets the confidence threshold
     bool is_whistle = false;
+    float whistle_confidence = 0.0f;
+    
+    // Check for "Whistling" (index 35) or "Whistle" (index 396)
     if (prediction.top_class_index == 35 || prediction.top_class_index == 396) {
-        is_whistle = true;
+        if (!prediction.confidence_scores.empty()) {
+            whistle_confidence = prediction.confidence_scores[0]; // Top confidence
+            is_whistle = whistle_confidence >= config_.confidence_threshold;
+        }
     }
     
     static bool last_state = false;
@@ -81,9 +87,9 @@ void ChokakuNode::check_whistle_detection() {
         whistle_publisher_->publish(message);
         
         if (current_state) {
-            RCLCPP_INFO(this->get_logger(), "Whistle detected! Class: %s (index: %d)", 
+            RCLCPP_INFO(this->get_logger(), "Whistle detected! Class: %s (index: %d, confidence: %.3f, threshold: %.3f)", 
                        prediction.predicted_classes.empty() ? "Unknown" : prediction.predicted_classes[0].c_str(),
-                       prediction.top_class_index);
+                       prediction.top_class_index, whistle_confidence, config_.confidence_threshold);
         } else {
             RCLCPP_INFO(this->get_logger(), "Whistle detection ended");
         }

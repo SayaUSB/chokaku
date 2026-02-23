@@ -38,6 +38,7 @@ struct ChokakuConfig {
     int sample_rate = 16000;
     float chunk_duration = 0.96f;
     int audio_buffer_size = 512;
+    float confidence_threshold = 0.3f;
     
     static ChokakuConfig load_from_json(const std::string& config_path);
 };

@@ -80,6 +80,8 @@ ChokakuConfig ChokakuConfig::load_from_json(const std::string& config_path) {
                 config.chunk_duration = std::stof(value);
             } else if (key == "audio_buffer_size") {
                 config.audio_buffer_size = std::stoi(value);
+            } else if (key == "confidence_threshold") {
+                config.confidence_threshold = std::stof(value);
             }
         }
     }
