@@ -61,8 +61,6 @@ int main() {
     
     std::cout << "Default Input Device ID: " << Pa_GetDefaultInputDevice() << "\n";
     std::cout << "Default Output Device ID: " << Pa_GetDefaultOutputDevice() << "\n";
-    
-    // Show recommended input devices
     std::cout << "\nRecommended Input Devices (with input channels):\n";
     std::cout << "===============================================\n";
     for (int i = 0; i < numDevices; i++) {
