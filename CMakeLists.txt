@@ -9,6 +9,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(OpenVINO REQUIRED)
 find_package(PkgConfig REQUIRED)
+find_package(jitsuyo REQUIRED)
 find_library(CSV_LIB csv)
 pkg_check_modules(PORTAUDIO REQUIRED portaudio-2.0)
 
@@ -23,7 +24,7 @@ add_executable(main
 )
 
 add_executable(check
-    test/chokaku_test.cpp
+    src/chokaku/chokaku_check.cpp
     src/chokaku/inference/chokaku_inference.cpp
     src/chokaku/utils/config.cpp
     src/chokaku/utils/prediction.cpp
