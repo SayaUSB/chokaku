@@ -100,9 +100,16 @@ private:
     PredictionResult latest_prediction_;
     mutable std::mutex prediction_mutex_;
 
+    // Preprocessing state
+    double hp_y_prev_ = 0.0;
+    double hp_x_prev_ = 0.0;
+    double lp_y_prev_ = 0.0;
+    double preemp_prev_x_ = 0.0;
+
     // Private methods
     void load_model();
     void load_class_map();
+    void preprocess(std::vector<float>& audio);
     
     void capture_loop(float duration, int sample_rate);
 };

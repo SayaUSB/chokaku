@@ -42,6 +42,13 @@ struct ChokakuConfig {
     int top_predictions_output = 5;
     bool print_output = true;
     
+    // Preprocessing configuration
+    bool enable_preprocessing = true;
+    double bandpass_low_freq = 2000.0;
+    double bandpass_high_freq = 5000.0;
+    double preemphasis_alpha = 0.97;
+    double noise_gate_threshold = 0.01;
+    
     static ChokakuConfig load_from_json(const std::string& config_path);
 };
 

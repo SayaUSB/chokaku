@@ -56,6 +56,11 @@ ChokakuConfig ChokakuConfig::load_from_json(const std::string& config_path) {
         valid_config &= jitsuyo::assign_val(config, "confidence_threshold", cfg.confidence_threshold);
         valid_config &= jitsuyo::assign_val(config, "top_predictions_output", cfg.top_predictions_output);
         valid_config &= jitsuyo::assign_val(config, "print_output", cfg.print_output);
+        valid_config &= jitsuyo::assign_val(config, "enable_preprocessing", cfg.enable_preprocessing);
+        valid_config &= jitsuyo::assign_val(config, "bandpass_low_freq", cfg.bandpass_low_freq);
+        valid_config &= jitsuyo::assign_val(config, "bandpass_high_freq", cfg.bandpass_high_freq);
+        valid_config &= jitsuyo::assign_val(config, "preemphasis_alpha", cfg.preemphasis_alpha);
+        valid_config &= jitsuyo::assign_val(config, "noise_gate_threshold", cfg.noise_gate_threshold);
         
         if (!valid_config) {
             throw std::runtime_error("Invalid config at " + config_path);

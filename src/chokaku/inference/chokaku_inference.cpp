@@ -140,12 +140,18 @@ PredictionResult Inference::predict(const float* audio_data,
     result.top_class_index = -1;
     
     try {
+        // Preprocess audio data
+        std::vector<float> processed(audio_data, audio_data + length);
+        if (config_.enable_preprocessing) {
+            preprocess(processed);
+        }
+
         ov::Tensor input_tensor(compiled_model_.input(input_name_).get_element_type(), 
                                input_shape_);
         
         float* input_data = input_tensor.data<float>();
-        size_t copy_len = std::min(length, input_shape_[0]);
-        std::memcpy(input_data, audio_data, copy_len * sizeof(float));
+        size_t copy_len = std::min(processed.size(), input_shape_[0]);
+        std::memcpy(input_data, processed.data(), copy_len * sizeof(float));
         
         if (copy_len < input_shape_[0]) {
             std::fill(input_data + copy_len, input_data + input_shape_[0], 0.0f);
@@ -281,6 +287,63 @@ size_t Inference::get_num_classes() const {
 PredictionResult Inference::get_latest_prediction() const {
     std::lock_guard<std::mutex> lock(prediction_mutex_);
     return latest_prediction_;
+}
+
+void Inference::preprocess(std::vector<float>& audio) {
+    if (!config_.enable_preprocessing) return;
+
+    double sample_rate = config_.sample_rate;
+
+    // High-pass filter for low freq cutoff
+    double hp_cutoff = config_.bandpass_low_freq;
+    double hp_alpha = hp_cutoff / (hp_cutoff + sample_rate);
+
+    // Low-pass filter for high freq cutoff
+    double lp_cutoff = config_.bandpass_high_freq;
+    double lp_alpha = lp_cutoff / (lp_cutoff + sample_rate);
+
+    // Pre-emphasis
+    double pre_alpha = config_.preemphasis_alpha;
+
+    // Noise gate
+    double threshold = config_.noise_gate_threshold;
+
+    // Apply noise gate
+    for (auto& x : audio) {
+        if (std::abs(x) < threshold) x = 0.0f;
+    }
+
+    // Apply band-pass: high-pass then low-pass
+    for (auto& x : audio) {
+        // High-pass
+        double y_hp = hp_alpha * (hp_y_prev_ + x - hp_x_prev_);
+        hp_y_prev_ = y_hp;
+        hp_x_prev_ = x;
+
+        // Low-pass on high-pass output
+        double y_lp = lp_alpha * y_hp + (1.0 - lp_alpha) * lp_y_prev_;
+        lp_y_prev_ = y_lp;
+        x = static_cast<float>(y_lp);
+    }
+
+    // Pre-emphasis
+    for (auto& x : audio) {
+        double y = x - pre_alpha * preemp_prev_x_;
+        preemp_prev_x_ = x;
+        x = static_cast<float>(y);
+    }
+
+    // Normalization
+    double max_abs = 0.0;
+    for (const auto& x : audio) {
+        max_abs = std::max(max_abs, static_cast<double>(std::abs(x)));
+    }
+    if (max_abs > 0.0) {
+        double scale = 1.0 / max_abs;
+        for (auto& x : audio) {
+            x = static_cast<float>(x * scale);
+        }
+    }
 }
 
 } // namespace chokaku
