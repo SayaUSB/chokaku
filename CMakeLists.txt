@@ -10,6 +10,8 @@ find_package(std_msgs REQUIRED)
 find_package(OpenVINO REQUIRED)
 find_package(PkgConfig REQUIRED)
 find_package(jitsuyo REQUIRED)
+find_package(keisan REQUIRED)
+find_package(nlohmann_json REQUIRED)
 find_library(CSV_LIB csv)
 pkg_check_modules(PORTAUDIO REQUIRED portaudio-2.0)
 
@@ -26,13 +28,12 @@ add_executable(main
 add_executable(check
     src/chokaku/chokaku_check.cpp
     src/chokaku/inference/chokaku_inference.cpp
-    src/chokaku/utils/config.cpp
     src/chokaku/utils/prediction.cpp
     src/chokaku/utils/audio_processing.cpp
     src/chokaku/utils/audio_capture.cpp
 )
 
-ament_target_dependencies(main rclcpp std_msgs)
+ament_target_dependencies(main rclcpp std_msgs jitsuyo keisan nlohmann_json)
 
 target_include_directories(main PRIVATE 
     ${PORTAUDIO_INCLUDE_DIRS}
@@ -69,18 +70,6 @@ target_compile_options(check PRIVATE
 
 install(TARGETS main check
   DESTINATION lib/${PROJECT_NAME}
-)
-
-install(DIRECTORY config
-  DESTINATION share/${PROJECT_NAME}/
-)
-install(DIRECTORY config
-  DESTINATION share/${PROJECT_NAME}/
-)
-
-# Install model files
-install(DIRECTORY models
-  DESTINATION share/${PROJECT_NAME}/
 )
 
 ament_package()

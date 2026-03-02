@@ -23,13 +23,16 @@
 #include "chokaku/node/chokaku_node.hpp"
 #include <csignal>
 #include <string>
+#include "jitsuyo/jitsuyo.hpp"
 
-ChokakuNode::ChokakuNode() : Node("chokaku_node") {
+ChokakuNode::ChokakuNode(const std::string& config_dir_path) : Node("chokaku_node"), config_dir_path_(config_dir_path) {
+    if (config_dir_path_.empty()) {
+        config_dir_path_ = "configuration/" + jitsuyo::get_host_name() + "/chokaku/";
+    }
+    
     whistle_publisher_ = this->create_publisher<std_msgs::msg::Bool>("chokaku/detection", 10);
     
-    std::string config_path = "config/chokaku_config.json";
-    this->declare_parameter("config_path", config_path);
-    config_path = this->get_parameter("config_path").as_string();
+    std::string config_path = config_dir_path_ + "chokaku_config.json";
     
     RCLCPP_INFO(this->get_logger(), "Starting Chokaku whistle detection node");
     RCLCPP_INFO(this->get_logger(), "Config path: %s", config_path.c_str());

@@ -19,7 +19,15 @@ int main(int argc, char* argv[]) {
     
     rclcpp::init(argc, argv);
     
-    g_node = std::make_shared<ChokakuNode>();
+    std::string config_dir;
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "--config-dir" && i + 1 < argc) {
+            config_dir = argv[i + 1];
+            ++i;
+        }
+    }
+    
+    g_node = std::make_shared<ChokakuNode>(config_dir);
     
     try {
         rclcpp::spin(g_node);

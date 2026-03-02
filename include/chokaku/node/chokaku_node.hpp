@@ -31,7 +31,7 @@
 
 class ChokakuNode : public rclcpp::Node {
 public:
-    ChokakuNode();
+    ChokakuNode(const std::string& config_dir_path = "");
     ~ChokakuNode();
 
 private:
@@ -41,6 +41,7 @@ private:
     rclcpp::TimerBase::SharedPtr timer_;
     std::unique_ptr<chokaku::Inference> inference_;
     chokaku::ChokakuConfig config_;
+    std::string config_dir_path_;
 };
 
 #endif // CHOKAKU_NODE_HPP
