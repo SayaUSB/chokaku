@@ -37,78 +37,74 @@ AudioCapture::AudioCapture(const ChokakuConfig& config)
 }
 
 AudioCapture::~AudioCapture() {
+    stop_stream();
     Pa_Terminate();
 }
 
-std::vector<float> AudioCapture::capture_audio_blocking(float duration, int sample_rate) {
-    size_t num_samples = static_cast<size_t>(duration * sample_rate);
-    std::vector<float> buffer(num_samples);
-    
-    PaStream* stream;
-    
-    // Set up input parameters
+void AudioCapture::start_stream(int sample_rate) {
+    if (stream_) return;
+
     PaStreamParameters inputParams;
-    
-    // Validate the specified device
     if (config_.mic_id >= 0 && config_.mic_id < Pa_GetDeviceCount()) {
         const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(config_.mic_id);
         if (deviceInfo->maxInputChannels > 0) {
             inputParams.device = config_.mic_id;
         } else {
-            std::cerr << "Device " << config_.mic_id << " (" << deviceInfo->name 
-                      << ") has no input channels, falling back to default input device\n";
             inputParams.device = Pa_GetDefaultInputDevice();
         }
     } else {
-        std::cerr << "Invalid device ID " << config_.mic_id 
-                  << ", falling back to default input device\n";
         inputParams.device = Pa_GetDefaultInputDevice();
     }
-    
-    // Check if we have a valid device
+
     if (inputParams.device == paNoDevice) {
-        std::cerr << "No valid input device found\n";
-        return {};
+        throw std::runtime_error("No valid input device found");
     }
-    
+
     const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(inputParams.device);
-    std::cout << "Using device: " << deviceInfo->name << " (max input channels: " 
-              << deviceInfo->maxInputChannels << ")\n";
-    
+    std::cout << "Opening persistent stream on device: " << deviceInfo->name << "\n";
+
     inputParams.channelCount = 1;
     inputParams.sampleFormat = paFloat32;
     inputParams.suggestedLatency = deviceInfo->defaultLowInputLatency;
     inputParams.hostApiSpecificStreamInfo = nullptr;
-    
-    PaError err = Pa_OpenStream(&stream,
-                              &inputParams,     // input parameters
-                              nullptr,          // output parameters (none)
-                              sample_rate,
-                              256,             // frames per buffer
-                              paClipOff,       // stream flags
-                              nullptr,         // callback (blocking mode)
-                              nullptr);
-    
+
+    PaError err = Pa_OpenStream(&stream_, &inputParams, nullptr, sample_rate, 256, paClipOff, nullptr, nullptr);
     if (err != paNoError) {
-        std::cerr << "Failed to open PortAudio stream: " << Pa_GetErrorText(err) << "\n";
-        return {};
+        throw std::runtime_error(std::string("Failed to open PortAudio stream: ") + Pa_GetErrorText(err));
     }
-    
-    err = Pa_StartStream(stream);
+
+    err = Pa_StartStream(stream_);
     if (err != paNoError) {
-        std::cerr << "Failed to start stream: " << Pa_GetErrorText(err) << "\n";
-        Pa_CloseStream(stream);
-        return {};
+        Pa_CloseStream(stream_);
+        stream_ = nullptr;
+        throw std::runtime_error(std::string("Failed to start stream: ") + Pa_GetErrorText(err));
     }
+}
+
+void AudioCapture::stop_stream() {
+    if (stream_) {
+        Pa_StopStream(stream_);
+        Pa_CloseStream(stream_);
+        stream_ = nullptr;
+    }
+}
+
+std::vector<float> AudioCapture::capture_audio_blocking(float duration, int sample_rate) {
+    if (!stream_) {
+        start_stream(sample_rate);
+    }
+
+    size_t num_samples = static_cast<size_t>(duration * sample_rate);
+    std::vector<float> buffer(num_samples);
     
-    // Read audio
-    err = Pa_ReadStream(stream, buffer.data(), num_samples);
+    PaError err = Pa_ReadStream(stream_, buffer.data(), num_samples);
     if (err != paNoError && err != paInputOverflowed) {
         std::cerr << "Error reading audio: " << Pa_GetErrorText(err) << "\n";
+        // Attempt to recover if it's a fatal error
+        if (err == paStreamIsStopped || err == paNotInitialized) {
+            stop_stream();
+        }
     }
-    
-    Pa_StopStream(stream);
-    Pa_CloseStream(stream);
     
     return buffer;
 }

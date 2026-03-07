@@ -12,7 +12,6 @@ find_package(PkgConfig REQUIRED)
 find_package(jitsuyo REQUIRED)
 find_package(keisan REQUIRED)
 find_package(nlohmann_json REQUIRED)
-find_library(CSV_LIB csv)
 pkg_check_modules(PORTAUDIO REQUIRED portaudio-2.0)
 
 add_executable(main 
@@ -49,13 +48,11 @@ target_link_libraries(main
     rclcpp::rclcpp
     openvino::runtime
     ${PORTAUDIO_LIBRARIES}
-    ${CSV_LIB}
 )
 
 target_link_libraries(check 
     openvino::runtime
     ${PORTAUDIO_LIBRARIES}
-    ${CSV_LIB}
 )
 
 target_compile_options(main PRIVATE 

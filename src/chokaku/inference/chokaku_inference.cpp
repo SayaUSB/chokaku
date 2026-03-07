@@ -21,7 +21,6 @@
 // SOFTWARE.
 
 #include "chokaku/inference/chokaku_inference.hpp"
-#include "chokaku/utils/csv.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -111,13 +110,22 @@ void Inference::load_model() {
 
 void Inference::load_class_map() {
     try {
-        io::CSVReader<3> csv(class_map_path_);
-        csv.read_header(io::ignore_extra_column, "index", "mid", "display_name");
-        
-        std::string index, mid, display_name;
-        while (csv.read_row(index, mid, display_name)) {
-            class_map_[index] = display_name;
+        std::ifstream file(class_map_path_);
+        if (!file.is_open()) {
+            throw std::runtime_error("Could not open class map file: " + class_map_path_);
         }
+
+        std::string line;
+        class_map_.clear();
+        while (std::getline(file, line)) {
+            if (!line.empty() && line.back() == '\r') {
+                line.pop_back();
+            }
+            if (!line.empty()) {
+                class_map_.push_back(line);
+            }
+        }
+        std::cout << "Loaded " << class_map_.size() << " classes from " << class_map_path_ << "\n";
     } catch (const std::exception& e) {
         std::cerr << "Error loading class map: " << e.what() << "\n";
     }
@@ -184,11 +192,12 @@ PredictionResult Inference::predict(const float* audio_data,
         for (size_t i = 0; i < std::min(size_t(5), num_classes); ++i) {
             size_t idx = scored_indices[i].second;
             float score = scored_indices[i].first;
-            std::string class_name = std::to_string(idx);
             
-            auto it = class_map_.find(std::to_string(idx));
-            if (it != class_map_.end()) {
-                class_name = it->second;
+            std::string class_name;
+            if (idx < class_map_.size()) {
+                class_name = class_map_[idx];
+            } else {
+                class_name = std::to_string(idx);
             }
             
             result.predicted_classes.push_back(class_name);

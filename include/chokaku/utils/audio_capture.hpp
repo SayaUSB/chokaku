@@ -36,8 +36,12 @@ public:
     
     std::vector<float> capture_audio_blocking(float duration, int sample_rate);
     
+    void start_stream(int sample_rate);
+    void stop_stream();
+
 private:
     ChokakuConfig config_;
+    PaStream* stream_ = nullptr;
     
     static int pa_callback(const void* input_buffer, void* output_buffer,
                           unsigned long frames_per_buffer,

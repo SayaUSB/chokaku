@@ -86,7 +86,7 @@ private:
     ov::Shape output_shape_;
 
     // Class mapping
-    std::map<std::string, std::string> class_map_;
+    std::vector<std::string> class_map_;
 
     // Real-time threading
     std::atomic<bool> running_{false};
