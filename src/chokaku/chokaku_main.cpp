@@ -14,10 +14,9 @@ namespace {
 }
 
 int main(int argc, char* argv[]) {
+    rclcpp::init(argc, argv);
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
-    
-    rclcpp::init(argc, argv);
     
     std::string config_dir;
     for (int i = 1; i < argc; ++i) {
