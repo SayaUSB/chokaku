@@ -37,7 +37,7 @@ public:
 private:
     void check_whistle_detection();
     
-    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr whistle_publisher_;
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr whistle_publisher;
     rclcpp::TimerBase::SharedPtr timer_;
     std::unique_ptr<chokaku::Inference> inference_;
     chokaku::ChokakuConfig config_;

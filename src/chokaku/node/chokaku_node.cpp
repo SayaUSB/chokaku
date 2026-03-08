@@ -30,7 +30,7 @@ ChokakuNode::ChokakuNode(const std::string& config_dir_path) : Node("chokaku_nod
         config_dir_path_ = "configuration/" + jitsuyo::get_host_name() + "/chokaku/";
     }
     
-    whistle_publisher_ = this->create_publisher<std_msgs::msg::Bool>("chokaku/detection", 10);
+    whistle_publisher = this->create_publisher<std_msgs::msg::Bool>("chokaku/detection", 10);
     
     std::string config_path = config_dir_path_ + "chokaku_config.json";
     
@@ -87,7 +87,7 @@ void ChokakuNode::check_whistle_detection() {
     if (current_state != last_state) {
         auto message = std_msgs::msg::Bool();
         message.data = current_state;
-        whistle_publisher_->publish(message);
+        whistle_publisher->publish(message);
         
         if (current_state) {
             RCLCPP_INFO(this->get_logger(), "Whistle detected! Class: %s (index: %d, confidence: %.3f, threshold: %.3f)", 
